@@ -44,6 +44,18 @@ erDiagram
         timestamp deleted_at "삭제일시"
     }
 
+%% 재고 이력
+    STOCK_HISTORY {
+        bigint id PK "재고 이력 기본키"
+        bigint quantity "변동 수량 (양수: 증가, 음수: 감소)"
+        varchar type "변동 유형 (INCREASE, DECREASE)"
+        bigint ref_product_id FK "상품 ID (PRODUCT 참조)"
+        bigint ref_order_id FK "관련 주문 ID (nullable)"
+        timestamp created_at "생성일시"
+        timestamp updated_at "수정일시"
+        timestamp deleted_at "삭제일시"
+    }
+
 %% 주문
     ORDER {
         bigint id PK "주문 기본키"
@@ -93,7 +105,7 @@ erDiagram
 %% 포인트 거래 이력
     POINT_HISTORY {
         bigint id PK "포인트 거래 내역 기본키"
-        bigint amount "거래 금액"
+        bigint amount "거래 금액 (양수: 충전/환불, 음수: 사용)"
         varchar type "거래 유형 (CHARGE, USE, REFUND)"
         bigint ref_user_id FK "사용자 ID (USER 참조)"
         bigint ref_order_id FK "관련 주문 ID (nullable)"
@@ -107,9 +119,11 @@ erDiagram
     USER ||--|| POINT: "보유"
     BRAND ||--o{ PRODUCT: "소속"
     PRODUCT ||--|| STOCK: "재고"
+    PRODUCT ||--o{ STOCK_HISTORY: "재고 이력"
     PRODUCT ||--o{ PRODUCT_LIKE: "좋아요"
     PRODUCT ||--o{ ORDER_DETAIL: "포함됨"
     ORDER ||--|{ ORDER_DETAIL: "주문 상품"
+    STOCK ||--o{ STOCK_HISTORY: "이력"
     POINT ||--o{ POINT_HISTORY: "이력"
 ```
 
@@ -171,6 +185,22 @@ erDiagram
 **인덱스**
 
 - `idx_stock_product_id` (`product_id`)
+
+---
+
+## STOCK_HISTORY
+
+**제약조건**
+
+- PRIMARY KEY: `id`
+- FOREIGN KEY: `product_id` → `PRODUCT(id)`
+- FOREIGN KEY: `order_id` → `ORDER(id)` (nullable)
+
+**인덱스**
+
+- `idx_stock_history_product_id` (`product_id`) - 상품별 재고 이력 조회
+- `idx_stock_history_created_at` (`created_at DESC`) - 시간순 정렬
+- `idx_stock_history_order_id` (`order_id`) - 주문별 재고 변동 추적
 
 ---
 
@@ -244,3 +274,10 @@ erDiagram
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `user_id` → `USER(id)`
 - FOREIGN KEY: `order_id` → `ORDER(id)` (nullable)
+
+**인덱스**
+
+- `idx_point_history_user_id` (`user_id`) - 사용자별 포인트 이력 조회
+- `idx_point_history_created_at` (`created_at DESC`) - 시간순 정렬
+- `idx_point_history_type` (`type`) - 거래 유형별 조회
+- `idx_point_history_order_id` (`order_id`) - 주문별 포인트 사용 내역
